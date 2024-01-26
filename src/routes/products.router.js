@@ -1,5 +1,6 @@
 const express = require('express')
 const ProductsManagerFS = require('../managers/productsManagerFS')
+const {productsModel} = require('../models/products.model')
 
 const router       = express.Router()
 const productsService = new ProductsManagerFS()
@@ -7,7 +8,20 @@ const productsService = new ProductsManagerFS()
 router
     .post('/', async (req, res)=>{
         try {
-            const result = await productsService.createProduct()
+            const {title, description, code, price, status, stock, category, thumbnails } = req.body
+   
+            const productNew = {
+                title,
+                description,
+                code,
+                price, 
+                status, 
+                stock, 
+                category, 
+                thumbnails
+            }
+
+    const result = await productsModel.create(productNew)
             //console.log(result)
             res.send({
                 stauts: 'success',
@@ -22,13 +36,12 @@ router
         try {
             const limit = req.query.limit;
             //console.log("LIMITE = " + limit)
-
-            const result = limit==undefined ? await productsService.getProducts() : await productsService.getProducts(parseInt(limit))
+            const products = await productsModel.find({})
             
-            //console.log(result)
+            //console.log(products)
             res.send({
                 stauts: 'success',
-                payload: result
+                payload: products
             })
         } catch (error) {
             res.status(500).send(`Error de server ${error.message}`)
@@ -37,7 +50,7 @@ router
     .get('/:pid', async (req, res)=>{
         try {
             const {pid} = req.params
-            const products = await productsService.getProductById(parseInt(pid))
+            const products = await productsModel.findOne({_id: pid})
             res.send({
                 status: 'success',
                 payload: products
@@ -51,7 +64,7 @@ router
         try {
             const {pid} = req.params
             const bodyData = req.body;
-            const result = await productsService.addDataToProduct(parseInt(pid),bodyData)
+            const result = await productsModel.findOneAndUpdate({_id: pid}, bodyData, {new: true})
             res.send({
                 status: 'success',
                 payload: result
@@ -63,7 +76,7 @@ router
     .delete('/:pid', async (req, res)=>{
         try {
             const {pid} = req.params
-            const result = await productsService.deleteProduct(parseInt(pid))
+            const result = await productsModel.findByIdAndDelete({_id: pid})
             res.send({
                 status: 'success',
                 payload: result
@@ -72,7 +85,7 @@ router
             console.log(error)
         }
     })
-    .post('/:cid/products/:pid', async (req, res)=>{
+    /*.post('/:cid/products/:pid', async (req, res)=>{
         try {
             const {cid, pid} = req.params // pid es el id de producto
             const result = await productsService.addProductToCart(Number(cid), Number(pid))
@@ -84,7 +97,7 @@ router
             console.log(error)
         }
         
-    })
+    })*/
 
 module.exports = router
 

@@ -4,6 +4,8 @@ const { userModel } = require('../models/users.model')
 const router = Router()
 
 
+
+
 // READ _____________________________________________________________________________
 // Endpint para solicitar todos los users GET http://localhost:8080/users ? limit=5
 router.get('/', async (req, res)=>{  
