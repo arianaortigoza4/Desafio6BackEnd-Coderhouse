@@ -1,4 +1,4 @@
-import mongoose from 'mongoose'
+const mongoose = require('mongoose')
 
 const messagesCollection = 'messages'
 
@@ -17,4 +17,6 @@ const messagesSchema = new mongoose.Schema({
 
 const chatModel = mongoose.model(messagesCollection, messagesSchema)
 
-export default chatModel
+module.exports = {
+    chatModel
+}
