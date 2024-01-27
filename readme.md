@@ -1,6 +1,6 @@
 # Práctica de integración sobre tu ecommerce : Consigna
 
-* Continuar sobre el proyecto que has trabajado para tu ecommerce y configurar los siguientes elementos:
+Continuar sobre el proyecto que has trabajado para tu ecommerce y configurar los siguientes elementos:
 
 * Agregar el modelo de persistencia de Mongo y mongoose a tu proyecto.
 * Crear una base de datos llamada “ecommerce” dentro de tu Atlas, crear sus colecciones “carts”, “messages”, “products” y sus respectivos schemas.
