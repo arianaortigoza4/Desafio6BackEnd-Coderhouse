@@ -1,12 +1,16 @@
 const express = require('express');
-const cartsRouter = require('./routes/carts.router.js');
-const productsRouter = require('./routes/products.router.js');
+//const cartsRouter = require('../src/routes/carts.router.js');
+//const productsRouter = require('../src/routes/products.router');
 const handlebars = require('express-handlebars');
 const { Server: ServerIO } = require('socket.io');
 const fs = require('fs/promises');
 const { connectDB } = require('./configDB/connectDB.js');
 const userManager = require('../src/dao/mongo/usersManager.js');
+const cartManager = require('../src/dao/mongo/CartsManager.js');
 const chatManagerRouter = require('../src/dao/mongo/ChatManager.js');
+const productManagerRouter = require('../src/dao/mongo/ProductsManager');
+
+
 
 const app = express();
 const PORT = 3000;
@@ -30,12 +34,16 @@ app.get('/realtimeproducts', (req, res) => {
     res.render('realtimeproducts', {});
 });
 
-app.get('/home', (req, res) => {
-    res.render('home', {});
+app.get('/realtimeproducts', (req, res) => {
+    res.render('realtimeproducts', {});
+});
+
+app.get('/api/chat', (req, res) => {
+    res.render('chat/chat', {});
 });
 
 app.use('/api/users', userManager);
-app.use('/api/carts', cartsRouter);
+app.use('/api/carts', cartManager);
 app.use('/api/products', (req, res, next) => {
     // Llama a tu función personalizada aquí
     updateJsonClient();
@@ -43,9 +51,9 @@ app.use('/api/products', (req, res, next) => {
     // Continúa con el siguiente middleware/route handler
     next();
 });
-app.use('/api/products', productsRouter);
+app.use('/api/products', productManagerRouter);
 
-// Importa el chatManagerRouter
+// Importa el chatManagerRouter y asigna una ruta adecuada
 app.use('/api/chat', chatManagerRouter);
 
 const httpServer = app.listen(8080, () => {
@@ -77,7 +85,7 @@ async function getProductsByFile(path) {
 
 async function updateJsonClient() {
     try {
-        const response = await getProductsByFile('../BackEnd/DESAFIO-5/src/jsonDb/Products.json');
+        const response = await getProductsByFile('src/jsonDb/Products.json');
         const jsonData = JSON.stringify(response, null, 2);
         io.emit('message', jsonData);
         console.log('\n\n\n\n\n updateJsonClient \n\n\n\n\n' + jsonData);

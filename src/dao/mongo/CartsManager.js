@@ -2,7 +2,6 @@ const express = require('express')
 const {cartsModel} = require('../models/carts.model')
 
 const router       = express.Router()
-const cartsService = new CartsManagerFS()
 
 router
     .post('/', async (req, res)=>{

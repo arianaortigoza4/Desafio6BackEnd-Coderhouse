@@ -2,7 +2,7 @@ const express = require('express')
 const {productsModel} = require('../models/products.model')
 
 const router       = express.Router()
-const productsService = new ProductsManagerFS()
+
 
 router
     .post('/', async (req, res)=>{

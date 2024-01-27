@@ -2,7 +2,7 @@ const fs = require('fs/promises')
 
 class ProductsManagerFS {
     constructor(){
-        this.path = '../BackEnd/DESAFIO-5/src/jsonDb/Products.json' 
+        this.path = 'src/jsonDb/Products.json' 
     }
 
     async readFile(){
