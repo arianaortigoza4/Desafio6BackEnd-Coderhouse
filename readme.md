@@ -1,6 +1,4 @@
-# Práctica de integración sobre tu ecommerce
-
-# Consigna
+# Práctica de integración sobre tu ecommerce : Consigna
 
 # Continuar sobre el proyecto que has trabajado para tu ecommerce y configurar los siguientes elementos:
 
