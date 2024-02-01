@@ -1,24 +1,40 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
-const cartsCollection = 'carts'
+const cartsCollection = 'carts';
 
 const cartsSchema = new mongoose.Schema({
-	product_id: {
-		type: String,
-		required: true
-	},
-	price: {
-		type: Number,
-		required: true
-	},
-	quantity: {
-		type: Number,
-		required: true
-	}
-})
+  products: [
+    {
+      product: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'products'
+      },
+      price: {
+        type: Number,
+      },
+      quantity: {
+        type: Number,
+      }
+    },
+  ],
+}, { timestamps: true });
 
-const cartsModel = mongoose.model(cartsCollection, cartsSchema)
+cartsSchema.pre('find', function (next) {
+  this.populate('products.product');
+  next();
+});
 
-module.exports = {
-    cartsModel
-}
+cartsSchema.pre('findOne', function (next) {
+  this.populate('products.product');
+  next();
+});
+
+cartsSchema.pre('findOneAndUpdate', function (next) {
+  this.populate('products.product');
+  next();
+});
+
+const cartsModel = mongoose.model(cartsCollection, cartsSchema);
+
+module.exports = cartsModel;
+

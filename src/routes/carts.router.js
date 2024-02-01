@@ -1,52 +1,143 @@
-const express = require('express')
-const CartsManagerFS = require('../dao/managers/cartsManagerFS')
+const { Router } = require('express');
+const cartManager = require('../dao/mongo/CartsManager.js');
 
-const router       = express.Router()
-const cartsService = new CartsManagerFS()
+const router = Router();
 
-router
-    .post('/', async (req, res)=>{
-        try {
-            const result = await cartsService.createCart()
-            console.log(result)
-            res.send({
-                stauts: 'success',
-                payload: result
-            })
-        } catch (error) {
-            res.status(500).send(`Error de server ${error.message}`)
-        }
-        // res.send('create carts')
-    })
-    .get('/:cid', async (req, res)=>{
-        try {
-            const {cid} = req.params
-            const cart = await cartsService.getCartById(parseInt(cid))
-            res.send({
-                status: 'success',
-                payload: cart
-            })
-        } catch (error) {
-            console.log(error)
-        }
-        // res.send('get cart')
-    })
-    .post('/:cid/products/:pid', async (req, res)=>{
-        try {
-            const {cid, pid} = req.params // pid es el id de producto
-            const result = await cartsService.addProductToCart(Number(cid), Number(pid))
-            res.send({
-                status: 'success',
-                payload: result
-            })
-        } catch (error) {
-            console.log(error)
-        }
-        
-    })
+router.get('/', async (req, res) => {
+  try {
+    const carts = await cartManager.getCarts();
+    res.status(200).send({ status: 'Success', payload: carts });
+  } catch (error) {
+    res.status(500).send({ status: 'Error', payload: `${error}` });
+  }
+});
 
-module.exports = router
+router.get('/:cid', async (req, res) => {
+  if (!req.params.cid) {
+    res.status(400).send({ status: 'Error', payload: 'Missed required arguments: cart id' });
+  }
 
+  try {
+    const cartId = req.params.cid;
+    const currentCart = await cartManager.getCartById(cartId);
+    res.status(200).send({ status: 'Success', payload: currentCart });
+  } catch (error) {
+    res.status(500).send({ status: 'Error', payload: `${error}` });
+  }
+});
 
+router.post('/:cid/product/:pid', async (req, res) => {
+  if (!req.params.cid || !req.params.pid || !req.body) {
+    res.status(400).send({ status: 'Error', payload: 'Missed required arguments: cart id, product id or product quantity' });
+  }
 
+  try {
+    const cartId = req.params.cid;
+    const productId = req.params.pid;
+    const productQuantity = req.body.quantity;
 
+    const data = await cartManager.addProductToCart(cartId, productId, productQuantity);
+
+    res.status(201).send({ status: 'Success', payload: data });
+  } catch (error) {
+    res.status(500).send({ status: 'Error', payload: `${error}` });
+  }
+});
+
+router.post('/', async (req, res) => {
+  if (!req.body) {
+    res.status(400).send({ status: 'Error', payload: 'Missed required arguments' });
+  }
+
+  try {
+    const currentCart = await cartManager.createCart(req.body);
+    res.status(201).send({ status: 'Success', payload: currentCart });
+  } catch (error) {
+    res.status(500).send({ status: 'Error', payload: `${error}` });
+  }
+});
+
+router.put('/:cid', async (req, res) => {
+  if (!req.params.cid || !req.body) {
+    res.status(400).send({ status: 'Error', payload: 'Missed required arguments: cart id or products to add' });
+  }
+
+  try {
+    const cartId = req.params.cid;
+    const newProducts = req.body;
+    let products = [];
+
+    products = newProducts.map((product) => {
+      const newProduct = {
+        product: product._id,
+        price: product.price,
+        quantity: product.quantity
+      };
+
+      return newProduct;
+    });
+
+    const updateCart = await cartManager.updateAllProducts(cartId, products);
+
+    if (!updateCart) return;
+
+    res.status(200).send({ status: 'Success', payload: updateCart });
+  } catch (error) {
+    res.status(500).send({ status: 'Error', payload: `${error}` });
+  }
+});
+
+router.put('/:cid/product/:pid', async (req, res) => {
+  if (!req.params.cid || !req.params.pid || !req.body) {
+    res.status(400).send({ status: 'Error', payload: 'Missed required arguments: cart id product id or quantity' });
+  }
+
+  try {
+    const cartId = req.params.cid;
+    const productId = req.params.pid;
+    const quantity = req.body.quantity;
+
+    const updateCart = await cartManager.updateQuantity(cartId, productId, quantity);
+
+    if (!updateCart) return;
+
+    res.status(200).send({ status: 'Success', payload: updateCart });
+  } catch (error) {
+    res.status(500).send({ status: 'Error', payload: `${error}` });
+  }
+});
+
+router.delete('/:cid/product/:pid', async (req, res) => {
+  if (!req.params.cid || !req.params.pid) {
+    res.status(400).send({ status: 'Error', payload: 'Missed required arguments: cart id or product id' });
+  }
+
+  try {
+    const cartId = req.params.cid;
+    const productId = req.params.pid;
+
+    const data = await cartManager.deleteProductOfCart(cartId, productId);
+
+    res.status(200).send({ status: 'Success', payload: data });
+  } catch (error) {
+    res.status(500).send({ status: 'Error', payload: `${error}` });
+  }
+});
+
+router.delete('/:cid', async (req, res) => {
+  if (!req.params.cid) {
+    res.status(400).send({ status: 'Error', payload: 'Missed required arguments: cart id' });
+  }
+
+  try {
+    const cartId = req.params.cid;
+
+    const data = await cartManager.deleteAllProductsOfCart(cartId);
+
+    res.status(200).send({ status: 'Success', payload: data });
+  } catch (error) {
+    res.status(500).send({ status: 'Error', payload: `${error}` });
+  }
+});
+
+module.exports = router;

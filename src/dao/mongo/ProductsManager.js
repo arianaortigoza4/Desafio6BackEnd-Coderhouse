@@ -1,86 +1,140 @@
-const express = require('express');
-const { productsModel } = require('../models/products.model');
+const productsModel = require('../models/products.model');
 
-const router = express.Router();
+class ProductManager {
+  #products;
 
-router
-    .post('/', async (req, res) => {
-        try {
-            const { title, description, code, price, status, stock, category, thumbnails } = req.body;
+  getProducts = async (limit, page, sort, query) => {
+    console.log('querys : ', limit, page, sort, query)
+    let formatLimit = limit ? parseInt(limit) : 10
+    let formatPage = page ? parseInt(page) : 1
+    
+    let formatQuery 
+    const categories = ['hogar', 'dormitorio', 'jardin', 'escritorios']
+    if(categories.includes(query)){
+      formatQuery = { category: query }
+    } else if (query === 'true' || query === 'false'){
+      formatQuery = { status: query }
+    } else {
+      formatQuery = {}
+    }
+    
+    let formatSort 
+    if(sort === 'asc'){
+      formatSort = 1
+    }else if(sort === 'desc'){
+      formatSort = -1
+    }
+    
+    try {
+      const products = await productsModel.paginate(formatQuery, {page: formatPage, limit: formatLimit, sort: { price: formatSort }, lean: true})
 
-            const productNew = {
-                title,
-                description,
-                code,
-                price,
-                status,
-                stock,
-                category,
-                thumbnails
-            };
+      products.prevLink = products.hasPrevPage ? `?page=${products.prevPage}` : ''
+      products.nextLink = products.hasNextPage ? `?page=${products.nextPage}` : ''
 
-            const result = await productsModel.create(productNew);
-            
-            res.send({
-                status: 'success',
-                payload: result
-            });
-        } catch (error) {
-            res.status(500).send(`Error de servidor: ${error.message}`);
+      if(products.totalPages > 1){
+        products.totalPagesArray = []
+        
+        for (let i = 1; i <= products.totalPages; i++) {
+          products.totalPagesArray.push(i)
         }
-    })
-    .get('/', async (req, res) => {
-        try {
-            const { limit = 10, page = 1, sort, query } = req.query;
-            const products = await productsModel.find({}).limit(Number(limit)).skip((page - 1) * limit).sort(sort);
+      } 
+      
+      products.payload = products.docs
+      delete products.docs
+      this.#products = products
+      
+      return this.#products
+    } catch (error) {
+      throw new Error(error)
+    }
+  }
 
-            res.send({
-                status: 'success',
-                payload: products
-            });
-        } catch (error) {
-            res.status(500).send(`Error de servidor: ${error.message}`);
+  addProduct = async (title, description, code, price, status, stock, category, thumbnails) => {
+    try {
+      if(!title || !description || !code || !price || !stock || !category){
+        if(!title){
+          throw new Error('Title is required')
+        } else if(!description){
+          throw new Error('Description is required')
+        } else if(!code){
+          throw new Error('Code is required')
+        } else if(!price){
+          throw new Error('Price is required')
+        } else if (!stock){
+          throw new Error('Stock is required')
+        } else if (!category){
+          throw new Error('Category is required')
+        } else {
+          throw new Error('Missed required arguments')
         }
-    })
-    .get('/:pid', async (req, res) => {
-        try {
-            const { pid } = req.params;
-            const product = await productsModel.findOne({ _id: pid });
+      }
 
-            res.send({
-                status: 'success',
-                payload: product
-            });
-        } catch (error) {
-            console.log(error);
+      const newProduct = {
+        title: title.trim(),
+        description: description.trim(),
+        code: code.trim(),
+        price: Number(price),
+        status: Boolean(status),
+        stock: Number(stock),
+        category: category.trim(),
+        thumbnails: thumbnails || []
+      }
+
+      await productsModel.create(newProduct)
+
+      return this.getProducts()
+    } catch (error) {
+      throw new Error(`Error trying to add a product: ${error}`)
+    }
+  }
+
+  getProductById = async (pid) => {
+    try {
+      if(!pid) throw new Error('Product ID is required')
+
+      const product = await productsModel.findById(pid).lean().exec()
+      
+      return product
+    } catch (error) {
+      throw new Error(`Error trying to get a product by Id: ${error}`)
+    }
+  }
+  
+  updateProduct = async (pid, field, data) => {
+    try {
+      if(!pid || !field || !data){
+        if(!pid){
+          throw new Error('Product ID is required')
+        } else if(!field){
+          throw new Error('Field to update is required')
+        } else if(!data){
+          throw new Error('New data is required')
+        } else {
+          throw new Error('Missed required arguments')
         }
-    })
-    .put('/:pid', async (req, res) => {
-        try {
-            const { pid } = req.params;
-            const bodyData = req.body;
-            const result = await productsModel.findOneAndUpdate({ _id: pid }, bodyData, { new: true });
+      }
 
-            res.send({
-                status: 'success',
-                payload: result
-            });
-        } catch (error) {
-            console.log(error);
-        }
-    })
-    .delete('/:pid', async (req, res) => {
-        try {
-            const { pid } = req.params;
-            const result = await productsModel.findByIdAndDelete({ _id: pid });
+      const updatedProduct = await productsModel.updateOne({ _id: pid }, { [field]: data })
 
-            res.send({
-                status: 'success',
-                payload: result
-            });
-        } catch (error) {
-            console.log(error);
-        }
-    });
+      return updatedProduct
+    } catch (error) {
+      throw new Error(`Error trying to update product: ${error}`)
+    }
+  }
 
-module.exports = router;
+  deleteProduct = async (pid) => {
+    try {
+      if(!pid) throw new Error('Product ID required')
+
+      await productsModel.deleteOne({ _id: pid })
+
+      return this.getProducts()
+    } catch (error) {
+      throw new Error(`Error trying to delete product: ${error}`)
+    }
+  }	
+}
+
+const productManager = new ProductManager();
+
+module.exports = productManager;

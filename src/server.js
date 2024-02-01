@@ -1,6 +1,6 @@
 const express = require('express');
-//const cartsRouter = require('../src/routes/carts.router.js');
-//const productsRouter = require('../src/routes/products.router');
+const cartsRouter = require('../src/routes/carts.router.js');
+const productsRouter = require('../src/routes/products.router');
 const handlebars = require('express-handlebars');
 const { Server: ServerIO } = require('socket.io');
 const fs = require('fs/promises');
@@ -8,7 +8,9 @@ const { connectDB } = require('./configDB/connectDB.js');
 const userManager = require('../src/dao/mongo/usersManager.js');
 const cartManager = require('../src/dao/mongo/CartsManager.js');
 const chatManagerRouter = require('../src/dao/mongo/ChatManager.js');
-const productManagerRouter = require('../src/dao/mongo/ProductsManager');
+const viewsProductsRouter = require('./routes/views.products.routes.js');
+const viewsCartRouter = require('./routes/views.cart.routes.js');
+const { userModel } = require('../src/dao/models/users.model')
 
 
 
@@ -26,12 +28,14 @@ app.engine('handlebars', handlebars.engine());
 app.set('views', __dirname + '/views');
 app.set('view engine', 'handlebars');
 
-app.get('/', (req, res) => {
-    res.render('index', {});
+const httpServer = app.listen(8080, () => {
+    console.log('Escuchando en el puerto 8080');
 });
 
-app.get('/realtimeproducts', (req, res) => {
-    res.render('realtimeproducts', {});
+const io = new ServerIO(httpServer);
+
+app.get('/', (req, res) => {
+    res.render('index', {});
 });
 
 app.get('/realtimeproducts', (req, res) => {
@@ -42,25 +46,58 @@ app.get('/api/chat', (req, res) => {
     res.render('chat/chat', {});
 });
 
+
+app.get('/carts', (req, res) => {
+    res.render('cart', {});
+});
+
+
+app.get('/users', async (req, res) => {
+    const {limit = 10, pageQuery = 1} = req.query
+    const {
+        docs,
+        hasPrevPage, 
+        hasNextPage,
+        prevPage, 
+        nextPage,
+        page 
+    } = await userModel.paginate({}, {limit, page: pageQuery, sort: {first_name: -1}, lean: true})
+    console.log(docs,
+        hasPrevPage, 
+        hasNextPage,
+        prevPage, 
+        nextPage,
+        page)
+    res.render('users', {
+        limit: limit,
+        users: docs,
+        hasPrevPage, 
+        hasNextPage,
+        prevPage, 
+        nextPage,
+        page 
+    })
+})
+
 app.use('/api/users', userManager);
-app.use('/api/carts', cartManager);
+app.use('/api/carts', cartsRouter);
 app.use('/api/products', (req, res, next) => {
     // Llama a tu función personalizada aquí
     updateJsonClient();
-    console.log('UPDATE PRODUCT');
+    console.log('ACTUALIZAR PRODUCTO');
     // Continúa con el siguiente middleware/route handler
     next();
 });
-app.use('/api/products', productManagerRouter);
+app.use('/api/products', productsRouter);
 
 // Importa el chatManagerRouter y asigna una ruta adecuada
 app.use('/api/chat', chatManagerRouter);
 
-const httpServer = app.listen(8080, () => {
-    console.log('Escuchando en el puerto 8080');
-});
+// Agrega el middleware para la ruta '/'
+app.use('/', viewsProductsRouter(io));
 
-const io = new ServerIO(httpServer);
+// Agrega el middleware para la ruta '/cart'
+app.use('/cart', viewsCartRouter);
 
 let mensajes = [];
 
@@ -100,7 +137,7 @@ function cbConnection(socket) {
     socket.on('message', (data) => {
         console.log(data);
         mensajes.push(data);
-        console.log('MENSAJE RECIBIDO EN EL SERVER');
+        console.log('MENSAJE RECIBIDO EN EL SERVIDOR');
     });
 }
 
